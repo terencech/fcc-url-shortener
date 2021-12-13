@@ -59,19 +59,18 @@ app.get('/api/hello', function(req, res) {
 });
 
 app.post('/api/shorturl', function(req, res) {
-  dns.lookup(req.body.url, function(err) {
-    if (err) res.json({ error: 'invalid url' })
+  dns.lookup(req.body.url, function(err, address) {
+    if (err) { 
+      res.json({ error: 'invalid url' })
+    }
     else {
-      console.log("DNS lookup successful");
       findUrlByOriginal(req.body.url, function(url) {
-        console.log("Existing URL entry found");
         if (url) {
           res.json({
             original_url: url.original_url,
             short_url: url.short_url
           })
         } else {
-          console.log("Creating new URL entry");
           createNewUrl(req.body.url, function(url) {
             res.json({
               original_url: url.original_url,
@@ -83,6 +82,12 @@ app.post('/api/shorturl', function(req, res) {
     }
   })
 })
+
+app.get('/api/shorturl/:shortUrl', function(req, res) {
+  findUrlByShort(Number(req.params.shortUrl), function(url) {
+    res.redirect("https://" + url.original_url);
+  });
+});
 
 app.listen(port, function() {
   console.log(`Listening on port ${port}`);
