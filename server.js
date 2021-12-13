@@ -85,7 +85,11 @@ app.post('/api/shorturl', function(req, res) {
 
 app.get('/api/shorturl/:shortUrl', function(req, res) {
   findUrlByShort(Number(req.params.shortUrl), function(url) {
-    res.redirect("https://" + url.original_url);
+    if (req.params.shortUrl.match(/^(https\:\/\/)||^(http\:\/\/)/)) {
+      res.redirect(url.original_url);
+    } else {
+      res.redirect("https://" + url.original_url);
+    }
   });
 });
 
