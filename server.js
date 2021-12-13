@@ -5,6 +5,7 @@ const app = express();
 const dns = require('dns');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
+const AutoIncrement = require('mongoose-sequence')(mongoose);
 
 // Basic Configuration
 const port = process.env.PORT || 3000;
@@ -16,14 +17,14 @@ app.use('/public', express.static(`${process.cwd()}/public`));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-mongoose.connect(process.env.MONGO_URI).catch(error => function(error) {
-  console.log(error);
-});
+mongoose.connect(process.env.MONGO_URI).catch(err => console.error(err));
 
 const urlSchema = new mongoose.Schema({
-  original_url: String,
-  short_url: Number
+  original_url: { type: String, required: true },
+  short_url: { type: Number, default: 1 }
 });
+
+urlSchema.plugin(AutoIncrement, { inc_field: 'short_url' });
 
 const Url = mongoose.model("Url", urlSchema);
 
@@ -61,17 +62,20 @@ app.post('/api/shorturl', function(req, res) {
   dns.lookup(req.body.url, function(err) {
     if (err) res.json({ error: 'invalid url' })
     else {
+      console.log("DNS lookup successful");
       findUrlByOriginal(req.body.url, function(url) {
+        console.log("Existing URL entry found");
         if (url) {
           res.json({
             original_url: url.original_url,
-            short_url: null
+            short_url: url.short_url
           })
         } else {
+          console.log("Creating new URL entry");
           createNewUrl(req.body.url, function(url) {
             res.json({
               original_url: url.original_url,
-              short_url: null
+              short_url: url.short_url
             })
           })
         };
