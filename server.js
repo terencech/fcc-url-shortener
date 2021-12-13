@@ -4,6 +4,7 @@ const cors = require('cors');
 const app = express();
 const dns = require('dns');
 const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
 
 // Basic Configuration
 const port = process.env.PORT || 3000;
@@ -12,8 +13,8 @@ app.use(cors());
 
 app.use('/public', express.static(`${process.cwd()}/public`));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
 mongoose.connect(process.env.MONGO_URI).catch(error => function(error) {
   console.log(error);
@@ -21,29 +22,29 @@ mongoose.connect(process.env.MONGO_URI).catch(error => function(error) {
 
 const urlSchema = new mongoose.Schema({
   original_url: String,
+  short_url: Number
 });
 
 const Url = mongoose.model("Url", urlSchema);
 
-function createNewUrl(originalUrl) {
-  const newUrl = new Url({ original_url: originalUrl });
-  newUrl.save(function (err, data) {
+function createNewUrl(originalUrl, callback) {
+  Url.create({ original_url: originalUrl }, function(err, url) {
     if (err) return console.error(err);
-    return data;
-  });
+    callback(url);
+  })
 }
 
-function findUrlByOriginal(originalUrl) {
+function findUrlByOriginal(originalUrl, callback) {
   Url.findOne({ original_url: originalUrl }, function(err, url) {
     if (err) return console.error(err);
-    return url;
+    callback(url);
   });
 }
 
-function findUrlById(urlId) {
-  Url.findById(urlId, function(err, url) {
+function findUrlByShort(shortUrl, callback) {
+  Url.findOne({ short_url: shortUrl }, function(err, url) {
     if (err) return console.error(err);
-    return url;
+    callback(url);
   })
 }
 
@@ -57,14 +58,23 @@ app.get('/api/hello', function(req, res) {
 });
 
 app.post('/api/shorturl', function(req, res) {
-  dns.lookup(req.body.url, function (err) {
+  dns.lookup(req.body.url, function(err) {
     if (err) res.json({ error: 'invalid url' })
     else {
-
-
-      res.json({
-        original_url: req.body.url,
-        short_url: 1
+      findUrlByOriginal(req.body.url, function(url) {
+        if (url) {
+          res.json({
+            original_url: url.original_url,
+            short_url: null
+          })
+        } else {
+          createNewUrl(req.body.url, function(url) {
+            res.json({
+              original_url: url.original_url,
+              short_url: null
+            })
+          })
+        };
       })
     }
   })
