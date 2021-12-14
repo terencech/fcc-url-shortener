@@ -62,28 +62,31 @@ app.get('/api/hello', function(req, res) {
 app.post('/api/shorturl', function(req, res) {
   const hostName = psl.get(req.body.url);
   dns.lookup(hostName, function(err, address) {
-    if (err || !hostName) { 
-      res.json({ error: 'invalid url' })
-    }
-    else {
+    if (hostName) {
       findUrlByOriginal(req.body.url, function(url) {
         if (url) {
+          console.log('Existing URL found');
           res.json({
             original_url: url.original_url,
             short_url: url.short_url
           })
         } else {
           createNewUrl(req.body.url, function(url) {
+            console.log('Creating new URL');
             res.json({
               original_url: url.original_url,
               short_url: url.short_url
-            })
-          })
+            });
+          });
         };
       })
+    } else {
+        if (err) console.error('Invalid URL');
+        res.json({ error: 'invalid url' });
+      }
     }
-  })
-})
+  );
+});
 
 app.get('/api/shorturl/:shortUrl', function(req, res) {
   findUrlByShort(Number(req.params.shortUrl), function(url) {
