@@ -60,8 +60,9 @@ app.get('/api/hello', function(req, res) {
 });
 
 app.post('/api/shorturl', function(req, res) {
-  dns.lookup(psl.get(req.body.url), function(err, address) {
-    if (err) { 
+  const hostName = psl.get(req.body.url);
+  dns.lookup(hostName, function(err, address) {
+    if (err || !hostName) { 
       res.json({ error: 'invalid url' })
     }
     else {
