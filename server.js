@@ -6,6 +6,7 @@ const dns = require('dns');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const AutoIncrement = require('mongoose-sequence')(mongoose);
+const psl = require('psl');
 
 // Basic Configuration
 const port = process.env.PORT || 3000;
@@ -59,7 +60,7 @@ app.get('/api/hello', function(req, res) {
 });
 
 app.post('/api/shorturl', function(req, res) {
-  dns.lookup(req.body.url, function(err, address) {
+  dns.lookup(psl.get(req.body.url), function(err, address) {
     if (err) { 
       res.json({ error: 'invalid url' })
     }
