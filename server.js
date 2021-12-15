@@ -59,36 +59,32 @@ app.get('/api/hello', function(req, res) {
 });
 
 app.post('/api/shorturl', function(req, res) {
-  dns.lookup(req.body.url, function(err, address) {
-    if (!err) {
+  const hostname = new URL(req.body.url).hostname;
+  dns.lookup(hostname, function(err, adress) {
+    if (err) res.json({ error: "invalid url" });
+    else {
       findUrlByOriginal(req.body.url, function(url) {
         if (url) {
-          console.log('Existing URL found');
           res.json({
             original_url: url.original_url,
             short_url: url.short_url
           })
         } else {
           createNewUrl(req.body.url, function(url) {
-            console.log('Creating new URL');
             res.json({
               original_url: url.original_url,
               short_url: url.short_url
             });
           });
-        };
+        }
       })
-    } else {
-        if (err) console.error('Invalid URL');
-        res.json({ error: 'invalid url' });
-      }
-    }
-  );
+    };
+  });
 });
 
 app.get('/api/shorturl/:shortUrl', function(req, res) {
   findUrlByShort(Number(req.params.shortUrl), function(url) {
-    if (req.params.shortUrl.match(/^(https\:\/\/)||^(http\:\/\/)/)) {
+    if (req.params.shortUrl.match(/^(http)s?\:\/\//)) {
       res.redirect(url.original_url);
     } else {
       res.redirect("https://" + url.original_url);
