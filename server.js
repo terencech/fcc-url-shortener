@@ -6,7 +6,6 @@ const dns = require('dns');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const AutoIncrement = require('mongoose-sequence')(mongoose);
-const psl = require('psl');
 
 // Basic Configuration
 const port = process.env.PORT || 3000;
@@ -60,9 +59,8 @@ app.get('/api/hello', function(req, res) {
 });
 
 app.post('/api/shorturl', function(req, res) {
-  const hostName = psl.get(req.body.url);
-  dns.lookup(hostName, function(err, address) {
-    if (hostName) {
+  dns.lookup(req.body.url, function(err, address) {
+    if (!err) {
       findUrlByOriginal(req.body.url, function(url) {
         if (url) {
           console.log('Existing URL found');
