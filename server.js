@@ -37,7 +37,6 @@ function isValidUrl(url) {
       console.error(err);
       resolve(false);
     }
-    console.log(urlObj.protocol);
     if (urlObj.protocol != 'http:' && urlObj.protocol != 'https:') { resolve(false); }
 
     dns.lookup(urlObj.hostname, function(err, address) {
