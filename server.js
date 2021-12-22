@@ -26,24 +26,46 @@ const urlSchema = new mongoose.Schema({
 
 urlSchema.plugin(AutoIncrement, { inc_field: 'short_url' });
 
-const Url = mongoose.model("Url", urlSchema);
+const UrlModel = mongoose.model("Url", urlSchema);
+
+function isValidUrl(url) {
+  return new Promise(resolve => {
+    let urlObj;
+    try {
+      urlObj = new URL(url);
+    } catch(err) {
+      console.error(err);
+      resolve(false);
+    }
+    console.log(urlObj.protocol);
+    if (urlObj.protocol != 'http:' && urlObj.protocol != 'https:') { resolve(false); }
+
+    dns.lookup(urlObj.hostname, function(err, address) {
+      if (err || !address) {
+        console.error(err);
+        resolve(false);
+      }
+      resolve(true);
+    })
+  })
+}
 
 function createNewUrl(originalUrl, callback) {
-  Url.create({ original_url: originalUrl }, function(err, url) {
+  UrlModel.create({ original_url: originalUrl }, function(err, url) {
     if (err) return console.error(err);
     callback(url);
   })
 }
 
 function findUrlByOriginal(originalUrl, callback) {
-  Url.findOne({ original_url: originalUrl }, function(err, url) {
+  UrlModel.findOne({ original_url: originalUrl }, function(err, url) {
     if (err) return console.error(err);
     callback(url);
   });
 }
 
 function findUrlByShort(shortUrl, callback) {
-  Url.findOne({ short_url: shortUrl }, function(err, url) {
+  UrlModel.findOne({ short_url: shortUrl }, function(err, url) {
     if (err) return console.error(err);
     callback(url);
   })
@@ -59,36 +81,34 @@ app.get('/api/hello', function(req, res) {
 });
 
 app.post('/api/shorturl', function(req, res) {
-  const hostname = new URL(req.body.url).hostname;
-  dns.lookup(hostname, function(err, adress) {
-    if (err) res.json({ error: "invalid url" });
-    else {
-      findUrlByOriginal(req.body.url, function(url) {
+  isValidUrl(req.body.url).then(result => {
+    if (result) {
+      findUrlByOriginal(req.body.url, url => {
         if (url) {
           res.json({
             original_url: url.original_url,
             short_url: url.short_url
           })
         } else {
-          createNewUrl(req.body.url, function(url) {
+          createNewUrl(req.body.url, url => {
             res.json({
               original_url: url.original_url,
               short_url: url.short_url
-            });
-          });
+            })
+          })
         }
       })
-    };
+    } else {
+      res.json({
+        error: 'invalid url'
+      })
+    }
   });
 });
 
 app.get('/api/shorturl/:shortUrl', function(req, res) {
-  findUrlByShort(Number(req.params.shortUrl), function(url) {
-    if (req.params.shortUrl.match(/^(http)s?\:\/\//)) {
-      res.redirect(url.original_url);
-    } else {
-      res.redirect("https://" + url.original_url);
-    }
+  findUrlByShort(req.params.shortUrl, url => {
+    res.redirect(url.original_url);
   });
 });
 
